@@ -15,7 +15,7 @@ Term: Spring 2018
 ![image](figs/summary.jpg)
 
 
-### [Project Report](doc/proj1_report.html)
+### [Project Report](http://www.columbia.edu/~hl3099/proj1_report.html)
 
 ### [Project Code](doc/proj1_report.Rmd)
 
