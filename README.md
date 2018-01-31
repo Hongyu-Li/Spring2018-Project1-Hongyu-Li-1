@@ -12,7 +12,7 @@ Term: Spring 2018
 
 + Project summary: Here I conduct a brief study on the differences of inauguration speeches between the Democratic Party and the Republican Party. Basically, this study used some techniques of text mining, analyzing some basic characteristics, keywords and sentiments of the speeches from these two parties. The results showed that the Republican Party delivers a long, consersative speech which talks about economy and authority with trustful words while the Democratic Party delivers a short, open speech which talks about democracy and liberty with positive words.
 
-![image](../figs/summary.jpg)
+![image](figs/summary.jpg)
 
 
 #### [Report](doc/proj1_report.html)
@@ -23,12 +23,12 @@ Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by
 
 ```
 proj/
-????????? R/
-????????? data/
-????????? doc/
-????????? figs/
-????????? output/
-????????? analysis.R
++-- R/
++-- data/
++-- doc/
++-- figs/
++-- output/
++-- analysis.R
 ```
 
 Please see each subfolder for a README file.
