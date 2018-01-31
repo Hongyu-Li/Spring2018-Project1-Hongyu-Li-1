@@ -1,0 +1,376 @@
+---
+title: "Donkey vs. Elephant: What's Their True Face?"
+output:
+  rmarkdown::html_document:
+    theme: spacelab
+bibliography: references.bib
+link-citations: yes
+csl: style.cls
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+![](E:/Columbia University/2018Spring/Applied Data Science/Github/Spring2018-Project1-Hongyu-Li/figs/donkey vs elephant.jpg)
+
+\newline
+\newline
+\newline
+
+
+
+In U.S. politics, the Democratic Party has been represented by a donkey and the Republican Party by an elephant for decades. People always say that the elephant symbolizes strength and the donkey represents hard work. However, is it the true face of these two parties? Let's find it out by analyzing inauguration speeches of presidents from these two parties!
+
+\newline
+\newline
+\newline
+
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+setwd('E:/Columbia University/2018Spring/Applied Data Science/Github/Spring2018-Project1-Hongyu-Li/data/')
+inaugu.info<-read.csv('InaugurationInfo.csv',stringsAsFactors = FALSE)
+inaugu.info$Filename<-paste('InauguralSpeeches/','inaug',inaugu.info$File,'-',
+                            inaugu.info$Term,'.txt',sep='')
+
+##Select the presidents from republican or democratic party 
+library(plyr)
+library(dplyr)
+inaugu.info<-inaugu.info %>% 
+                  filter(Party == 'Democratic' | Party == 'Republican')
+
+##Add full text into inaugu.info
+inaugu.info$Fulltext<-rep(NA,nrow(inaugu.info))
+for (i in 1:nrow(inaugu.info)){
+  inaugu.info[i,7]<-paste(readLines(inaugu.info$Filename[i],n=-1,skipNul=TRUE),
+                          collapse=" ")
+}
+```
+
+## How about their speeches?
+
+In order to get some basic characteristics of speeches from these two parties, the length of speech, the number of [personal pronouns](https://en.wikipedia.org/wiki/Personal_pronoun) and the [readability of speech](https://en.wikipedia.org/wiki/Readability) would be analyzed in this part. 
+
+### Length of speech
+
+According to the boxplot, we could find that presidents from the Democratic Party are more likely to deliver a shorter speech than the Republican Party.  
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(shiny)
+library(plotly)
+
+div(plot_ly(type = "box") %>%
+  add_boxplot(y=inaugu.info$Words[inaugu.info$Party=='Democratic'],
+              marker = list(color = 'orange',alpha=0.5),
+              line = list(color = 'orange',alpha=0.5),
+              name='Democratic') %>%
+  add_boxplot(y=inaugu.info$Words[inaugu.info$Party=='Republican'],
+              marker = list(color = 'blue',alpha=0.5),
+              line = list(color = 'blue',alpha=0.5),
+              name='Republican'),
+  align='center')
+```
+
+
+### Number of personal pronouns
+
+In this part, I want to know whether presidents from different parties have different preferences on personal pronouns (*I*, *you*, *we*). Actually, personal pronouns play a big role in political speeches because they indicates whom the speaker in question identifies with[@beard2000language]. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align='center'}
+word.freq<-function(word,df){
+  words.list<-sapply(df$Fulltext,strsplit,split=' ')
+  count<-rep(NA,length(words.list))
+  for (i in 1:length(words.list)){
+      count[i]<-table(words.list[i])[word]/df[i,5]
+  }
+  names(count)<-NULL
+  count<-ifelse(is.na(count),0,count)
+  return (count)
+}
+
+## Count personal pronouns in speeches
+inaugu.info$Icount<-word.freq('I',inaugu.info)
+inaugu.info$youcount<-word.freq('you',inaugu.info)+
+                      word.freq('You',inaugu.info)
+inaugu.info$wecount<-word.freq('we',inaugu.info)+
+                      word.freq('We',inaugu.info)
+inaugu.info$theycount<-word.freq('they',inaugu.info)
+
+## Compare the number of personal pronouns
+library(ggplot2)
+library(ggpubr)
+p1<-ggplot(inaugu.info)+
+  geom_violin(aes(x=Party,y=Icount,fill=Party,color=Party),alpha=0.5)+
+  labs(y='Frequency',title="Mentions of I")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+p2<-ggplot(inaugu.info)+
+  geom_violin(aes(x=Party,y=youcount,fill=Party,color=Party),alpha=0.5)+
+  labs(y='Frequency',title="Mentions of You")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+p3<-ggplot(inaugu.info)+
+  geom_violin(aes(x=Party,y=wecount,fill=Party,color=Party),alpha=0.5)+
+  labs(y='Frequency',title="Mentions of We")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+p4<-ggplot(inaugu.info)+
+  geom_violin(aes(x=Party,y=theycount,fill=Party,color=Party),alpha=0.5)+
+  labs(y='Frequency',title="Mentions of They")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggarrange(p1,p2,p3,p4,common.legend=TRUE,legend = 'right')
+```
+
+The violin plots show that presidents from the Democratic Party mention *they* more often than republican ones while presidents from the Republican Party use *I* more frequent than the Democratic Party. As for mentions of *we* and *you*, it seems that there is no big difference between these two parties. However, if we take a closer look at the shape of these plots, we could find that the style of using personal pronouns in democratic party is more consistent in the Democratic Party since its mentions of pronouns do not vary so much between presidents. 
+\
+
+
+And moreover, we could also find that republicans are more conservative than democrats because *I* is often used to speak as an individual rather than as a representative of a group while *they* is more likely to be used to separate self from other[@haakansson2012use]. 
+\
+
+
+
+### Readability
+
+Nowadays, there are a lot of indexes used to calculate readability scores, including [Flesch-Kincaid](https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests),  [Gunning-Fog](https://en.wikipedia.org/wiki/Gunning_fog_index),  [Coleman_liau](https://en.wikipedia.org/wiki/Coleman%E2%80%93Liau_index), [SMOG](https://en.wikipedia.org/wiki/SMOG) and [Automated-readability](https://en.wikipedia.org/wiki/Automated_readability_index) index. Here, I used *readability* package to calculate the readability score of speech.
+
+```{r message=FALSE,echo=FALSE,warning=FALSE}
+library(readability)
+readscore<-function(row){
+  grade<-readability(row[7],grouping.var = NULL)
+  return (grade)
+}
+inaugu.info<-adply(inaugu.info,1,readscore)
+inaugu.info<-inaugu.info[,-12]
+
+## Prepare for heatmap
+id_name<-paste(inaugu.info$File,'-',inaugu.info$Term,sep='')
+id_name<-c(id_name,c('DemocraticEND','','RepublicanBEGIN'))
+party<-c(inaugu.info$Party,rep('Democratic',3))
+id_name<-id_name[order(party)]
+grade<-inaugu.info[,12:17]
+grade[47:49,]<-rep(NA,6)
+colnames(grade)<-c('F-K','G-F','C-L','SMOG','A-R','Average')
+heat_mat<-cbind(grade,party)
+heat_mat<-heat_mat[order(party),]
+rownames(heat_mat)<-id_name
+
+#devtools::install_github('ramnathv/htmlwidgets')
+#library(htmlwidgets)
+#install.packages('d3heatmap')
+library(d3heatmap)
+library(shiny)
+div(d3heatmap(heat_mat[,-7], scale="none", colors= "Greens",
+          xaxis_font_size = 8,Rowv = FALSE,Colv=FALSE,show_grid=TRUE),
+    align='center')
+```
+
+In this heatmap, the top block represents the readability scores of speeches from the Democratic Party while the bottom one shows the scores of the Republican Party. And the rows in each block have been ordered by the inauguration dates of presidents. Actually, a darker color stands for a higher score of readability. That is to say, the speech filled with a darker color is harder to read. 
+\
+
+
+Based on this heatmap, we could see that in the beginning, the speeches from both parties were difficult to read and at that time, the democratic speeches were harder than the republican ones. But over time, speeches from both parties became more simple and easier to read. It's reasonable because in the early period, presidents could assume that they were speaking to audiences made up mostly of men like themselves: educated, civic-minded landowners. These, of course, were the only Americans with the right to vote (https://www.theatlantic.com/politics/archive/2014/10/have-presidential-speeches-gotten-less-sophisticated-over-time/381410/). However, as time goes, the franchise expanded and presidential appeals had to reach a broader audience. In my opinion, the Democratic Party and the Republican Party do not have a big difference in readability from 1960s to now.
+\
+
+
+In a word, the inauguration speech of Republican Party is longer and more conversative than the Democratic Party. However, both of them are becoming more and more simple to read nowadays.
+\
+
+
+## What do they focus on? 
+
+In this part, I would like to know these two parties' concentrations and focuses. Therefore, I counted the frequency of words in two paties seperately by using *tm* package and tried to find the most frequently used words in each party's inauguration speeches. Below are the word clouds of the Democratic Party(with the donkey figure) and the Republican Party(with the elephant figure).
+
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+library(tm)
+library(tidytext)
+```
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+### The democratic Party
+setwd('E:/Columbia University/2018Spring/Applied Data Science/Github/Spring2018-Project1-Hongyu-Li/output/democratic')
+
+##Write the democratic speeches into the democreatic file
+for(i in 1:nrow(inaugu.info)){
+    if (inaugu.info[i,4]=='Democratic'){
+      text <- inaugu.info$Fulltext[i]
+      filename <- paste0(inaugu.info$File[i], "-", 
+                       inaugu.info$Term[i], ".txt")
+      sink(file = filename) %>% # open file to write 
+      cat(text)  # write the file
+      sink() # close the file
+    }
+}
+
+speech.democratic<-Corpus(DirSource('E:/Columbia University/2018Spring/Applied Data Science/Github/Spring2018-Project1-Hongyu-Li/output/democratic'))
+
+#Clean the data
+speech.democratic<-tm_map(speech.democratic, stripWhitespace)
+speech.democratic<-tm_map(speech.democratic, content_transformer(tolower))
+speech.democratic<-tm_map(speech.democratic, removeWords, stopwords("english"))
+speech.democratic<-tm_map(speech.democratic, removeWords, character(0))
+speech.democratic<-tm_map(speech.democratic, removePunctuation)
+
+d.tdm<-TermDocumentMatrix(speech.democratic)
+d.tdm.tidy<-tidy(d.tdm)
+d.tdm.tidy<-d.tdm.tidy %>% filter(count>=3)
+democratic<-summarise(group_by(d.tdm.tidy, term), sum(count))
+
+library(rJava)
+library(wordcloud2)
+library(htmlwidgets)
+log<-system.file("examples/donkey.png",package = "wordcloud2")
+wordcloud_democratic<-wordcloud2(democratic,color='random-light',
+                                  backgroundColor='dark',size=2, 
+                                  minRotation = pi/2,maxRotation =pi/2,
+                                  rotateRatio = 0.5,figPath = log)
+```
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+### The Republican Party
+setwd('E:/Columbia University/2018Spring/Applied Data Science/Github/Spring2018-Project1-Hongyu-Li/output/republican')
+
+##Write the democratic speeches into the democreatic file
+for(i in 1:nrow(inaugu.info)){
+    if (inaugu.info[i,4]=='Republican'){
+      text <- inaugu.info$Fulltext[i]
+      filename <- paste0(inaugu.info$File[i], "-", 
+                       inaugu.info$Term[i], ".txt")
+      sink(file = filename) %>% # open file to write 
+      cat(text)  # write the file
+      sink() # close the file
+    }
+}
+
+speech.republican<-Corpus(DirSource('E:/Columbia University/2018Spring/Applied Data Science/Github/Spring2018-Project1-Hongyu-Li/output/republican'))
+
+#Clean the data
+speech.republican<-tm_map(speech.republican, stripWhitespace)
+speech.republican<-tm_map(speech.republican, content_transformer(tolower))
+speech.republican<-tm_map(speech.republican, removeWords, stopwords("english"))
+speech.republican<-tm_map(speech.republican, removeWords, character(0))
+speech.republican<-tm_map(speech.republican, removePunctuation)
+
+r.tdm<-TermDocumentMatrix(speech.republican)
+r.tdm.tidy<-tidy(r.tdm)
+r.tdm.tidy<-r.tdm.tidy %>% filter(count>=3)
+republican<-summarise(group_by(r.tdm.tidy, term), sum(count))
+
+ele<-system.file("examples/elephant.png",package = "wordcloud2")
+wordcloud_republican<- wordcloud2(republican,color='random-light',
+                                  backgroundColor='dark',size=5, 
+                                  minRotation = pi/2,maxRotation =pi/2,
+                                  rotateRatio = 0.5,figPath = ele)
+```
+
+
+![](E:/Columbia University/2018Spring/Applied Data Science/Github/Spring2018-Project1-Hongyu-Li/figs/wordcloud_democratic.jpg)
+\
+
+
+![](E:/Columbia University/2018Spring/Applied Data Science/Github/Spring2018-Project1-Hongyu-Li/figs/wordcloud_republican.jpg) 
+\
+
+
+
+From these two word clouds , we could see that **american(america), freedom(free), democracy and citizens** are mentioned mostly in the inauguration speeches of the Democratic party while **business(economic), duty, federal and authority** are the most often used by the republican presidents. That is to say, the Democratic Party focuses more on democracy and liberty while the Republican Party puts more weights on economy and authority. Basically, these results are consistent with the political positions of the [Democratic Party](https://en.wikipedia.org/wiki/Political_positions_of_the_Democratic_Party) and the [Republican Party](https://en.wikipedia.org/wiki/Political_positions_of_the_Republican_Party). 
+
+
+
+## How do they feel emotionally? 
+
+Lastly, I want to know if presidents from different party have different auttitudes or emotions when they are delivering the inauguration speech. So, I conducted sentimental analysis to the speeches.   
+
+```{r warning=FALSE, message=FALSE,echo=FALSE}
+library(sentimentr)
+library(qdap)
+library(syuzhet)
+library(tibble)
+
+sentiment.df<-NULL
+
+for(i in 1:nrow(inaugu.info)){
+  sentences<-sent_detect(inaugu.info$Fulltext[i],
+                        endmarks = c("?", ".", "!", "|",";"))
+  if(length(sentences)>0){
+    emotions<-get_nrc_sentiment(sentences)
+    word.count<-word_count(sentences)
+    emotions<-diag(1/(word.count+0.01))%*%as.matrix(emotions)
+    sentiment.df=rbind(sentiment.df, 
+                        cbind(inaugu.info[i,],
+                              sentences=as.character(sentences), 
+                              word.count,
+                              emotions,
+                              sent.id=1:length(sentences)
+                              )
+    )
+  }
+}
+
+## Summary emotions
+presid.summary<-tbl_df(sentiment.df)%>%
+  group_by(Filename)%>%
+  summarise(
+    anger=mean(anger,na.rm=TRUE),
+    anticipation=mean(anticipation,na.rm=TRUE),
+    disgust=mean(disgust,na.rm=TRUE),
+    fear=mean(fear,na.rm=TRUE),
+    joy=mean(joy,na.rm=TRUE),
+    sadness=mean(sadness,na.rm=TRUE),
+    surprise=mean(surprise,na.rm=TRUE),
+    trust=mean(trust,na.rm=TRUE),
+    negative=mean(negative,na.rm=TRUE),
+    positive=mean(positive,na.rm=TRUE),
+  )
+
+sent.df<-merge(inaugu.info[,c(1,3,4,6)],presid.summary,
+               by.x="Filename",by.y = 'Filename')
+
+sent.df.d<-sent.df[sent.df$Party=='Democratic',-4]
+sent.df.r<-sent.df[sent.df$Party=='Republican',-4]
+d.name<-paste0(sent.df$President[sent.df$Party=='Democratic'],
+               sent.df$Term[sent.df$Party=='Democratic'])
+d.name<-c(d.name,c('DemocraticEND','','RepublicanBEGIN'))
+r.name<-paste0(sent.df$President[sent.df$Party=='Republican'],
+               sent.df$Term[sent.df$Party=='Republican'])
+sent.df.d<-sent.df.d[,-c(1,2,3)]
+sent.df.d[23:25,]<-rep(NA,10)
+sent.mat.d<-data.matrix(sent.df.d)
+rownames(sent.mat.d)<-d.name
+sent.mat.r<-data.matrix(sent.df.r[,-c(1,2,3)])
+rownames(sent.mat.r)<-r.name
+
+sent.mat<-rbind(sent.mat.d,sent.mat.r)
+
+
+
+library(d3heatmap)
+library(shiny)
+div(d3heatmap(sent.mat, scale="none", colors= "Reds",
+          xaxis_font_size = 8,Rowv = FALSE,Colv=FALSE,show_grid=TRUE),
+    align='center')
+```
+
+Basically, presidents from both parties are trying to show positivity and trust bacause these columns have the darkest color in the heatmap. According to this map, we could say that the Democratic Party is more positive than the Republican Party and the Republic Party is more trustful in their speeches than the Democratic Party. What's more, anticipation, joy, fear and negativity also play some roles in their speeches but it seems that they do not have big difference between two parties. What's more, if you're interested in looking for more detailed results of each president's sentiments, you could run the app in my *lib* folder(lib/plotsent_app.R). 
+\
+
+
+### Summary
+
+By analyzing the inauguration speeches in the Democratic Party and the Republican Party, we could get the following results.
+
+
++ The Republican Party delivers a long, consersative speech which talks about economy and authority with trustful words. 
+
++ The Democratic Party delivers a short, open speech which talks about democracy and liberty with positive words.
+
+![](E:/Columbia University/2018Spring/Applied Data Science/Github/Spring2018-Project1-Hongyu-Li/figs/summary.jpg)
+
+
+
+### References
+
